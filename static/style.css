@@ -1,0 +1,47 @@
+.blinking{
+    animation:blinkingText 0.8s infinite;
+}
+@keyframes blinkingText{
+    100%{  color: transparent; }
+}
+
+.text {
+    font-family: "Ubuntu Mono", monospace;
+    color: whitesmoke;
+}
+
+.body {
+    font-size: large;
+}
+
+.heading {
+    font-family: "Ubuntu Mono", monospace;
+    color: limegreen;
+}
+
+.no_underline {
+    text-decoration: none;
+}
+
+.link {
+    color: #268BD2;
+}
+
+.center {
+    max-width: 1250px;
+    margin: auto;
+}
+
+.terminal {
+    background-color: #292929;
+    padding: 5px;
+    border-radius: 10px;
+}
+
+.prompt {
+    color: limegreen;
+}
+
+body {
+    background-color: black;
+}

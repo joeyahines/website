@@ -1,0 +1,21 @@
+{% extends "base" %}
+
+{% block command %}
+./about.sh
+{% endblock command %}
+
+{% block content %}
+    > Aspiring Embedded Software Engineer <br/>
+    > Electrical and Computer Engineering Masters Student at Auburn University <br/>
+    > Graduated from the University of Texas at Dallas with a BS in Computer Engineering <br/>
+    > Maker of Basic Websites <br/>
+    <br/>
+
+    <span class="prompt">joey@ahines:~$</span> ls <br/>
+    {% for link in links %}
+    <a class="link" href="/{{ link.link_name }}">{{ link.link_name }}</a>&nbsp;&nbsp;
+    {% endfor %}
+    <a class="link" href="https://www.github.com/joeyahines"> github</a>&nbsp;&nbsp;
+    <a class="link" href="mailto:joey@ahines.net"> email</a>&nbsp;&nbsp;
+    <a class="link" href="https://www.linkedin.com/in/joeyahines/"> linkedin</a>&nbsp;&nbsp;<br/>
+{% endblock content %}

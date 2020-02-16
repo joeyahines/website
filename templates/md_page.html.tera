@@ -1,0 +1,11 @@
+{% extends "base" %}
+
+{% block command %}
+cat {{ page }}.md
+{% endblock command %}
+
+
+{% block content %}
+<br/>
+{{ md_data | safe }}
+{% endblock content %}

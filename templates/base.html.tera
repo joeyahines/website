@@ -1,0 +1,27 @@
+
+<!DOCTYPE html>
+<link rel="stylesheet" type="text/css" href="/static/style.css" xmlns="http://www.w3.org/1999/html">
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Joey Hines.</title>
+    <link href="https://fonts.googleapis.com/css?family=Ubuntu+Mono&display=swap" rel="stylesheet">
+    <link rel='shortcut icon' href='/static/logo.png'/>
+</head>
+<body>
+
+<div class="center">
+    <a class="no_underline" href="/"> <h1 class="heading"> Joey Hines.</h1></a>
+        <div class="terminal">
+            <p class="text body">
+                <span class="prompt">joey@ahines:~$</span> {% block command %}{% endblock command %} <br/>
+                {% block content %}{% endblock content %}
+                <br/>
+                <span class="prompt">joey@ahines:~$</span> <span class="blinking">  &#9610; </span>
+            </p>
+        </div>
+    <h6 class="text"> &copy <script type="text/javascript">document.write( new Date().getFullYear().toString());</script> Joey Hines</h6>
+</div>
+</body>
+</html>
+
