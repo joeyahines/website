@@ -5,6 +5,7 @@
 {% endblock command %}
 
 {% block content %}
+    <br/>
     > Aspiring Embedded Software Engineer <br/>
     > Electrical and Computer Engineering Masters Student at Auburn University <br/>
     > Graduated from the University of Texas at Dallas with a BS in Computer Engineering <br/>
@@ -12,8 +13,9 @@
     <br/>
 
     <span class="prompt">joey@ahines:~$</span> ls <br/>
+    <br/>
     {% for link in links %}
-    <a class="link" href="/{{ link.link_name }}">{{ link.link_name }}</a>&nbsp;&nbsp;
+    <a class="link" href="about/{{ link.link_name }}">{{ link.link_name }}</a>&nbsp;&nbsp;
     {% endfor %}
     <a class="link" href="https://www.github.com/joeyahines"> github</a>&nbsp;&nbsp;
     <a class="link" href="mailto:joey@ahines.net"> email</a>&nbsp;&nbsp;

@@ -1,8 +1,8 @@
 
 <!DOCTYPE html>
-<link rel="stylesheet" type="text/css" href="/static/style.css" xmlns="http://www.w3.org/1999/html">
 <html lang="en">
 <head>
+    <link rel="stylesheet" type="text/css" href="/static/style.css" xmlns="http://www.w3.org/1999/html">
     <meta charset="UTF-8">
     <title>Joey Hines.</title>
     <link href="https://fonts.googleapis.com/css?family=Ubuntu+Mono&display=swap" rel="stylesheet">
