@@ -15,7 +15,7 @@ Picking Rust and Rocket
 As I am not much of a UI person, the website update was put on the back burner for sometime. The old site was "good 
 enough." I originally considered doing it in Python and using Django. But that fails the criteria of being easily
 deployable. In early 2020, I began learning Rust out of curiosity and the need to use it for research. 
-I decided to tackle the website backend in Rust as a learning exercise. I then went with the Rocket framework. It 
+I decided to tackle the website backend in Rust as a learning exercise. I went with the Rocket framework. It
 seemed to suit my needs and supported Tera templates. Tera templates are very similar to Django's templates that I
 had already had experience in.
 
@@ -32,14 +32,13 @@ character of a file name is its rank. For example, my resume is in a file called
 
 Improving Aesthetics
 --------------------
-Like stated early, I am no UI designer. The terminal style meant I could put very little effort into the design of the
-actual website. Somehow on version one, I still managed to mess that up. This was mainly due to hacking together 
-bootstrap to give me something that looked like a terminal. This time, I dumped Bootstrap and wrote my own CSS.  I should
-have done that the first place as it was easy to do and produced a far better result. This also by side effect improved
-on the site looked on mobile.
+Like stated earlier, I am no UI designer. The terminal style meant I could put very little effort into the design of the
+actual website. Somehow in version one, I still managed to mess that up. This was mainly due to hacking together
+bootstrap to give me something that looked like a terminal. This time, I dumped Bootstrap and wrote my own CSS. I should
+have done that the first place as it was easy to do and produced a far better result. This also has the side effect of
+improving how the site looked on mobile.
 
 Future Improvements
 -------------------
-As I continue to learn Rust, I plan to implement more features of RST into the raw file displays. For example, doing
-links. I want to strike a balance between the aesthetic of a terminal and usefulness. Being able to embedded images
-would be nice.
+As I continue to learn Rust, I plan to implement more features of RST into the raw file displays. Having clickable
+links or embedding images. I want to strike a balance between the aesthetic of a terminal and ease of use of a website.
