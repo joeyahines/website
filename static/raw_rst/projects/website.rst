@@ -15,9 +15,11 @@ Picking Rust and Rocket
 As I am not much of a UI person, the website update was put on the back burner for sometime. The old site was "good 
 enough." I originally considered doing it in Python and using Django. But that fails the criteria of being easily
 deployable. In early 2020, I began learning Rust out of curiosity and the need to use it for research. 
-I decided to tackle the website backend in Rust as a learning exercise. I went with the Rocket framework. It
+I decided to tackle the website backend in Rust as a learning exercise. I went with the `Rocket`_ framework. It
 seemed to suit my needs and supported Tera templates. Tera templates are very similar to Django's templates that I
 had already had experience in.
+
+.. _Rocket: https://rocket.rs/
 
 Easily Editable
 ---------------
@@ -40,5 +42,5 @@ improving how the site looked on mobile.
 
 Future Improvements
 -------------------
-As I continue to learn Rust, I plan to implement more features of RST into the raw file displays. Having clickable
-links or embedding images. I want to strike a balance between the aesthetic of a terminal and ease of use of a website.
+As I continue to learn Rust, I plan to implement more features of RST into the raw file displays. For example,
+embedding images. I want to strike a balance between the aesthetic of a terminal and ease of use of a website.

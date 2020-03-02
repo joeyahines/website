@@ -3,8 +3,11 @@
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate serde_derive;
 
-use std::collections::HashMap;
+mod tests;
+mod rst_parser;
 
+use rst_parser::parse_links;
+use std::collections::HashMap;
 use rocket::Request;
 use rocket_contrib::templates::Template;
 use rocket_contrib::serve::StaticFiles;
@@ -29,7 +32,6 @@ impl error::Error for PageNotFoundError {
         None
     }
 }
-
 
 #[derive(Serialize)]
 struct SiteFile {
@@ -162,7 +164,7 @@ fn rst_page(page: PathBuf) -> Template {
     else {
         // Else, render the RST page
         let mut map = HashMap::new();
-        let mut contents = match fs::read_to_string(site_page.path) {
+        let contents = match fs::read_to_string(site_page.path) {
             Ok(contents) => contents,
             Err(_) => {
                 let mut map = HashMap::new();
@@ -170,6 +172,9 @@ fn rst_page(page: PathBuf) -> Template {
                 return Template::render("404", map)
             },
         };
+
+        // Render links
+        let mut contents = parse_links(&contents);
 
         // Ensure render will look good
         contents = contents.replace("\n", "<br>");
@@ -181,6 +186,7 @@ fn rst_page(page: PathBuf) -> Template {
     }
 
 }
+
 
 /// Catches 404 errors and displays an error message
 ///
