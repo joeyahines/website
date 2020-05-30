@@ -3,9 +3,11 @@ use super::*;
 
 #[test]
 fn test_link_parser() {
-    let mut input = String::from("This is a paragraph that contains `a link`_.
+    let mut input = String::from(
+        "This is a paragraph that contains `a link`_.
 
-    .. _a link: https://domain.invalida\n");
+    .. _a link: https://domain.invalida\n",
+    );
 
     let output = parse_links(&mut input);
 

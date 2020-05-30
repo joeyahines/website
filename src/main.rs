@@ -1,22 +1,26 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate rocket;
+#[macro_use]
+extern crate serde_derive;
 
-mod tests;
 mod rst_parser;
+mod tests;
 
+use regex::Regex;
+use rocket::Request;
+use rocket_contrib::serve::StaticFiles;
+use rocket_contrib::templates::Template;
 use rst_parser::parse_links;
 use std::collections::HashMap;
-use rocket::Request;
-use rocket_contrib::templates::Template;
-use rocket_contrib::serve::StaticFiles;
-use std::{fs, io};
-use std::path::PathBuf;
 use std::error;
 use std::fmt;
+use std::path::{PathBuf, Path};
+use std::{fs, io};
+use std::io::Error;
 
-type PageResult<T> = std::result::Result<T, PageNotFoundError>;
+type PageResult<T> = std::result::Result<T, JSiteError>;
 
 #[derive(Clone, Debug)]
 struct PageNotFoundError;
@@ -33,8 +37,27 @@ impl error::Error for PageNotFoundError {
     }
 }
 
+#[derive(Clone, Debug)]
+enum JSiteError {
+    PageNotFound(PageNotFoundError),
+    IOError,
+}
+
+impl std::convert::From<PageNotFoundError> for JSiteError {
+    fn from(e: PageNotFoundError) -> Self {
+        JSiteError::PageNotFound(e)
+    }
+}
+
+impl std::convert::From<std::io::Error> for JSiteError {
+    fn from(_: Error) -> Self {
+        JSiteError::IOError
+    }
+}
+
 #[derive(Serialize)]
 struct SiteFile {
+    rank: u32,
     file_name: String,
     link_name: String,
     path: PathBuf,
@@ -55,7 +78,7 @@ fn index() -> Template {
 
     // Get the links to display on the main page
     match get_pages("static/raw_rst", &mut links) {
-       Err(_) => (),
+        Err(_) => (),
         Ok(_) => (),
     }
 
@@ -63,41 +86,56 @@ fn index() -> Template {
     Template::render("index", &map)
 }
 
-/// Gets all the raw rst pages contained in static/raw_rst/
+/// Gets all the raw rst pages contained in a directory
 ///
-/// The rst page can start with a number
+/// The order of the vector is determined by OS. Ordering can be set by prepending the file name
+/// with a number. Files that start with lower numbers are placed earlier in the list.
 ///
 /// # Arguments
-///
-/// * `links` - A reference to a vector of string to insert the links into
-fn get_pages(path: &str, links: &mut Vec<SiteFile>) -> io::Result<()> {
-    // Gather all of the rst files in static/raw_rst/
-    let mut entries: Vec<PathBuf> =  fs::read_dir(path)?
-        .map(|res| res.map(|e| e.path()))
-        .collect::<Result<Vec<_>, io::Error>>()?;
-
-    // Sort so they are always in the same order
-    entries.sort();
+/// * `path` - the path to look for pages in
+/// * `pages` - A vector where found pages will be inserted
+fn get_pages(path: &str, pages: &mut Vec<SiteFile>) -> io::Result<()> {
+    let re = Regex::new(r"(?P<rank>^\d*)(?P<link_name>.+)").unwrap();
 
     // Find all files in the directory
-    for entry in entries {
-        let file_name = entry.file_stem().unwrap().to_str().unwrap();
-        let link_name;
-        if file_name.chars().next().unwrap().is_numeric() {
-            link_name = &file_name[1..];
-        }
-        else {
-            link_name = file_name;
-        }
-
-        let rst_file = SiteFile {
-            file_name: String::from(file_name),
-            link_name: String::from(link_name),
-            path: entry.to_owned()
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        let path = entry.path();
+        let file_name = match path.file_stem() {
+            Some(name) => name,
+            None => continue,
         };
 
-        links.push(rst_file);
+        let file_name = match file_name.to_str() {
+            Some(name) => name,
+            None => continue,
+        };
+
+        if let Some(caps) = re.captures(file_name) {
+            let link_name = &caps["link_name"];
+            let rank = &caps["rank"];
+
+            let rank: u32 = if rank.is_empty() {
+                std::u32::MAX
+            } else {
+                match rank.parse() {
+                    Ok(r) => r,
+                    Err(_) => std::u32::MAX
+                }
+            };
+
+            let site_file = SiteFile {
+                rank,
+                file_name: file_name.to_string(),
+                link_name: link_name.to_string(),
+                path: entry.path(),
+            };
+
+            pages.push(site_file);
+        }
     }
+
+    pages.sort_by(|a, b| a.rank.cmp(&b.rank));
 
     Ok(())
 }
@@ -108,39 +146,62 @@ fn get_pages(path: &str, links: &mut Vec<SiteFile>) -> io::Result<()> {
 ///
 /// * `path` - path to search in
 /// * `page_name` - file to look for
-fn get_page(path: &str, page_name: &str) -> Result<SiteFile, PageNotFoundError> {
-    let mut pages: Vec<SiteFile> = Vec::new();
+fn get_page(path: &Path) -> PageResult<SiteFile> {
+    let file_name = path.file_name().ok_or(PageNotFoundError)?;
+    let file_name =  file_name.to_str().ok_or(PageNotFoundError)?.to_string();
+    if path.exists() {
+        return Ok(SiteFile {
+            rank: 0,
+            file_name: file_name.clone(),
+            link_name: file_name.clone(),
+            path: path.to_path_buf()
+        })
+    }
+    else {
+        let mut dir_path = path.to_path_buf();
+        dir_path.pop();
 
-    // Get pages
-    match get_pages(path, &mut pages) {
-        Err(_) => return Err(PageNotFoundError),
-        Ok(_) => (),
-    };
+        for entry in dir_path.read_dir()? {
+            let entry = entry?;
+            let entry_name = entry.file_name().into_string().unwrap();
 
-    // Look for the page in the directory
-    for page in pages {
-        if page.link_name.eq_ignore_ascii_case(page_name) {
-            return Ok(page)
+            if entry_name.contains(&file_name) {
+                return Ok(SiteFile {
+                    rank: 0,
+                    file_name: entry_name,
+                    link_name: file_name,
+                    path: entry.path()
+                })
+            }
         }
     }
 
-    Err(PageNotFoundError)
+    Err(JSiteError::from(PageNotFoundError))
+}
+
+fn error_page(page: &str) -> Template {
+    let mut map = HashMap::new();
+    map.insert("error_page", page);
+    return Template::render("404", map);
 }
 
 /// Returns a rendered template of a raw rst page if it exists
 ///
 /// # Arguments
 ///
-/// * `page` - a string containing the name of the rst file to look for
+/// * `page` - path to page
 #[get("/about/<page..>")]
 fn rst_page(page: PathBuf) -> Template {
+    let mut path = PathBuf::from("static/raw_rst");
+    path.push(page);
+
     // Try and get the page
-    let site_page = match get_page(format!("static/raw_rst/{}", page.parent().unwrap().to_str().unwrap()).as_str(),  &page.file_name().unwrap().to_str().unwrap()) {
+    let site_page = match get_page(
+        path.as_path()
+    ) {
         Ok(site_page) => site_page,
         Err(_) => {
-            let mut map = HashMap::new();
-            map.insert("error_page", page);
-            return Template::render("404", map)
+            return error_page(path.to_str().unwrap());
         }
     };
 
@@ -149,28 +210,27 @@ fn rst_page(page: PathBuf) -> Template {
         let mut map = HashMap::new();
         let mut sub_files: Vec<SiteFile> = Vec::new();
         match get_pages(site_page.path.to_str().unwrap(), &mut sub_files) {
-            Err(_) => (),
             Ok(_) => (),
-        };
+            Err(_) => return error_page(&site_page.link_name)
+        }
 
         let page_data = PageData {
             links: sub_files,
-            site_file: site_page
+            site_file: site_page,
         };
 
         map.insert("page_data", page_data);
         return Template::render("listing", &map);
-    }
-    else {
+    } else {
         // Else, render the RST page
         let mut map = HashMap::new();
         let contents = match fs::read_to_string(site_page.path) {
             Ok(contents) => contents,
             Err(_) => {
                 let mut map = HashMap::new();
-                map.insert("error_page", page);
-                return Template::render("404", map)
-            },
+                map.insert("error_page", site_page.link_name);
+                return Template::render("404", map);
+            }
         };
 
         // Render links
@@ -184,9 +244,7 @@ fn rst_page(page: PathBuf) -> Template {
         map.insert("content", contents);
         Template::render("rst_page", &map)
     }
-
 }
-
 
 /// Catches 404 errors and displays an error message
 ///
@@ -202,11 +260,10 @@ fn not_found(req: &Request<'_>) -> Template {
     Template::render("404", &map)
 }
 
-
 /// Launches website
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
-        .mount("/", routes![index, rst_page], )
+        .mount("/", routes![index, rst_page])
         .mount("/static", StaticFiles::from("static"))
         .attach(Template::fairing())
         .register(catchers![not_found])
