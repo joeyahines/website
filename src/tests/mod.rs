@@ -1,5 +1,5 @@
 #[cfg(test)]
-use super::*;
+use super::rst_parser::parse_links;
 
 #[test]
 fn test_link_parser() {

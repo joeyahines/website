@@ -77,10 +77,7 @@ fn index() -> Template {
     let mut links: Vec<SiteFile> = Vec::new();
 
     // Get the links to display on the main page
-    match get_pages("static/raw_rst", &mut links) {
-        Err(_) => (),
-        Ok(_) => (),
-    }
+    get_pages("static/raw_rst", &mut links).ok();
 
     map.insert("links", links);
     Template::render("index", &map)
@@ -143,7 +140,6 @@ fn get_pages(path: &str, pages: &mut Vec<SiteFile>) -> io::Result<()> {
 /// Gets a page matching `page_name` in directory `path`
 ///
 /// # Arguments
-///
 /// * `path` - path to search in
 /// * `page_name` - file to look for
 fn get_page(path: &Path) -> PageResult<SiteFile> {
@@ -153,7 +149,7 @@ fn get_page(path: &Path) -> PageResult<SiteFile> {
         return Ok(SiteFile {
             rank: 0,
             file_name: file_name.clone(),
-            link_name: file_name.clone(),
+            link_name: file_name,
             path: path.to_path_buf()
         })
     }
@@ -182,13 +178,12 @@ fn get_page(path: &Path) -> PageResult<SiteFile> {
 fn error_page(page: &str) -> Template {
     let mut map = HashMap::new();
     map.insert("error_page", page);
-    return Template::render("404", map);
+    Template::render("404", map)
 }
 
 /// Returns a rendered template of a raw rst page if it exists
 ///
 /// # Arguments
-///
 /// * `page` - path to page
 #[get("/about/<page..>")]
 fn rst_page(page: PathBuf) -> Template {
@@ -220,7 +215,7 @@ fn rst_page(page: PathBuf) -> Template {
         };
 
         map.insert("page_data", page_data);
-        return Template::render("listing", &map);
+        Template::render("listing", &map)
     } else {
         // Else, render the RST page
         let mut map = HashMap::new();
@@ -249,7 +244,6 @@ fn rst_page(page: PathBuf) -> Template {
 /// Catches 404 errors and displays an error message
 ///
 /// #Arguments
-///
 /// * `req` - information on the original request
 #[catch(404)]
 fn not_found(req: &Request<'_>) -> Template {
