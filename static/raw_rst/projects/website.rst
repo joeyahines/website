@@ -42,5 +42,6 @@ improving how the site looked on mobile.
 
 Future Improvements
 -------------------
-As I continue to learn Rust, I plan to implement more features of RST into the raw file displays. For example,
-embedding images. I want to strike a balance between the aesthetic of a terminal and ease of use of a website.
+As I continue to learn Rust, I plan to implement more features of RST into the raw file displays. ~~For example,
+embedding images~~ (now onto text formatting...). I want to strike a balance between the aesthetic of a terminal and
+ease of use of a website.

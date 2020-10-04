@@ -5,8 +5,8 @@ ls {{ page_data.site_file.link_name }}
 {% endblock command %}
 
 {% block content %}
-{% for link in page_data.links %}
 <br>
+{% for link in page_data.links %}
 <a class="link" href="{{ page_data.site_file.link_name}}/{{ link.link_name }}">{{ link.link_name }}</a>&nbsp;&nbsp;
 {% endfor %}
 <br>

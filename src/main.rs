@@ -5,9 +5,10 @@ extern crate rocket;
 #[macro_use]
 extern crate serde_derive;
 
-mod rst_parser;
 mod tests;
+mod rst_parser;
 
+use crate::rst_parser::parse_images;
 use regex::Regex;
 use rocket::Request;
 use rocket_contrib::serve::StaticFiles;
@@ -16,9 +17,9 @@ use rst_parser::parse_links;
 use std::collections::HashMap;
 use std::error;
 use std::fmt;
-use std::path::{PathBuf, Path};
-use std::{fs, io};
 use std::io::Error;
+use std::path::{Path, PathBuf};
+use std::{fs, io};
 
 type PageResult<T> = std::result::Result<T, JSiteError>;
 
@@ -117,7 +118,7 @@ fn get_pages(path: &str, pages: &mut Vec<SiteFile>) -> io::Result<()> {
             } else {
                 match rank.parse() {
                     Ok(r) => r,
-                    Err(_) => std::u32::MAX
+                    Err(_) => std::u32::MAX,
                 }
             };
 
@@ -144,16 +145,15 @@ fn get_pages(path: &str, pages: &mut Vec<SiteFile>) -> io::Result<()> {
 /// * `page_name` - file to look for
 fn get_page(path: &Path) -> PageResult<SiteFile> {
     let file_name = path.file_name().ok_or(PageNotFoundError)?;
-    let file_name =  file_name.to_str().ok_or(PageNotFoundError)?.to_string();
+    let file_name = file_name.to_str().ok_or(PageNotFoundError)?.to_string();
     if path.exists() {
         return Ok(SiteFile {
             rank: 0,
             file_name: file_name.clone(),
             link_name: file_name,
-            path: path.to_path_buf()
-        })
-    }
-    else {
+            path: path.to_path_buf(),
+        });
+    } else {
         let mut dir_path = path.to_path_buf();
         dir_path.pop();
 
@@ -166,8 +166,8 @@ fn get_page(path: &Path) -> PageResult<SiteFile> {
                     rank: 0,
                     file_name: entry_name,
                     link_name: file_name,
-                    path: entry.path()
-                })
+                    path: entry.path(),
+                });
             }
         }
     }
@@ -191,9 +191,7 @@ fn rst_page(page: PathBuf) -> Template {
     path.push(page);
 
     // Try and get the page
-    let site_page = match get_page(
-        path.as_path()
-    ) {
+    let site_page = match get_page(path.as_path()) {
         Ok(site_page) => site_page,
         Err(_) => {
             return error_page(path.to_str().unwrap());
@@ -206,7 +204,7 @@ fn rst_page(page: PathBuf) -> Template {
         let mut sub_files: Vec<SiteFile> = Vec::new();
         match get_pages(site_page.path.to_str().unwrap(), &mut sub_files) {
             Ok(_) => (),
-            Err(_) => return error_page(&site_page.link_name)
+            Err(_) => return error_page(&site_page.link_name),
         }
 
         let page_data = PageData {
@@ -229,7 +227,8 @@ fn rst_page(page: PathBuf) -> Template {
         };
 
         // Render links
-        let mut contents = parse_links(&contents);
+        let mut contents = parse_links(&contents).unwrap();
+        contents = parse_images(contents.as_str()).unwrap();
 
         // Ensure render will look good
         contents = contents.replace("\n", "<br>");
