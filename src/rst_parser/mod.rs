@@ -27,7 +27,7 @@ impl RSTImage {
         let mut style = "".to_string();
 
         if let Some(alt) = &self.alt {
-            html = format!("{} {}", html, alt);
+            html = format!("{} alt=\"{}\"", html, alt);
         }
 
         if let Some(height) = &self.height {
