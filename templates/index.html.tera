@@ -6,9 +6,9 @@
 
 {% block content %}
     <br/>
-    > Aspiring Embedded Software Engineer <br/>
-    > Electrical and Computer Engineering Masters Student at Auburn University <br/>
-    > Graduated from the University of Texas at Dallas with a BS in Computer Engineering <br/>
+    > Embedded Software Engineer at <a class="link" href="https://www.bluecanyontech.com/">Blue Canyon Technologies</a><br/>
+    > Masters of Electrical and Computer Engineering from Auburn University <br/>
+    > Bachelors of Computer Engineering from The University of Texas at Dallas <br/>
     > Maker of Basic Websites <br/>
     <br/>
 

@@ -4,7 +4,7 @@ Joey Hines - joey@ahines.net - Auburn,AL
 Education
 ---------
 * Masters of Science in Electrical and Computer Engineering
-  * Auburn University, Auburn, AL. GPA: 3.83. Expected May 2021
+  * Auburn University, Auburn, AL. GPA: 3.9. May 2021
 * Bachelors of Science in Computer Engineering
   * The University of Texas at Dallas, Richardson, TX. GPA: 3.59. May 2019
 
