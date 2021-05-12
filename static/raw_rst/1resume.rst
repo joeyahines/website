@@ -16,7 +16,7 @@ Technical Skills
 
 Work Experience
 ---------------
-Auburn University - Graduate Research and Teaching Assistant - August 2019 to Present
+Auburn University - Graduate Research and Teaching Assistant - August 2019 to May 2021
 * Command and Data Handling (CDHS) team lead for a cube satellite project
 * Collaborated with other team members to develop mission software
 * Instructed an embedded systems lab course covering the fundamentals of embedded programing on a microcontroller
