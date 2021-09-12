@@ -1,5 +1,5 @@
-Joey Hines - joey@ahines.net - Auburn,AL
-=========================================
+Joey Hines - joey@ahines.net - Westminster, CO
+==============================================
 
 Education
 ---------
@@ -16,6 +16,10 @@ Technical Skills
 
 Work Experience
 ---------------
+Blue Canyon Technologies - Flight Software Engineer - May 2021 to Present
+* Developed flight software for small satellite missions
+* Collaborated with mission operations to improve ground station capabilities
+
 Auburn University - Graduate Research and Teaching Assistant - August 2019 to May 2021
 * Command and Data Handling (CDHS) team lead for a cube satellite project
 * Collaborated with other team members to develop mission software

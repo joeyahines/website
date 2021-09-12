@@ -11,8 +11,7 @@ mod rst_parser;
 use crate::rst_parser::parse_images;
 use regex::Regex;
 use rocket::Request;
-use rocket_contrib::serve::StaticFiles;
-use rocket_contrib::templates::Template;
+use rocket_dyn_templates::Template;
 use rst_parser::parse_links;
 use std::collections::HashMap;
 use std::error;
@@ -248,21 +247,17 @@ fn rst_page(page: PathBuf) -> Template {
 fn not_found(req: &Request<'_>) -> Template {
     let mut map = HashMap::new();
 
-    map.insert("error_page", String::from(req.uri().path()));
+    map.insert("error_page", String::from(req.uri().path().as_str()));
 
     Template::render("404", &map)
 }
 
 /// Launches website
-fn rocket() -> rocket::Rocket {
-    rocket::ignite()
+#[launch]
+fn rocket() -> _ {
+    rocket::build()
         .mount("/", routes![index, rst_page])
-        .mount("/static", StaticFiles::from("static"))
+        .mount("/static", rocket::fs::FileServer::from("static"))
         .attach(Template::fairing())
-        .register(catchers![not_found])
-}
-
-/// Main
-fn main() {
-    rocket().launch();
+        .register("/",catchers![not_found])
 }
