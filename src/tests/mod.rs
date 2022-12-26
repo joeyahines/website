@@ -1,5 +1,5 @@
 #[cfg(test)]
-use super::rst_parser::{parse_links, parse_images};
+use super::rst_parser::{parse_images, parse_links};
 
 #[test]
 fn test_link_parser() {
@@ -16,8 +16,7 @@ fn test_link_parser() {
 
 #[test]
 fn test_image_parser() {
-    let input =
-        ".. image:: cool/image/123.png
+    let input = ".. image:: cool/image/123.png
             :width: 60%
             :height: auto
             :alt: this is the alt text
@@ -26,5 +25,4 @@ fn test_image_parser() {
     let output = parse_images(input).unwrap();
 
     assert_eq!(output.trim_end(), "<img src=\"cool/image/123.png\" alt=\"this is the alt text\" style=\"height;60%;width:60%;\">")
-
 }

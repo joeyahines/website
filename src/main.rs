@@ -1,59 +1,29 @@
-#![feature(proc_macro_hygiene, decl_macro)]
-
-#[macro_use]
-extern crate rocket;
-#[macro_use]
-extern crate serde_derive;
-
-mod tests;
+mod error;
 mod rst_parser;
+mod tests;
 
 use crate::rst_parser::parse_images;
+use axum::error_handling::HandleErrorLayer;
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use axum::response::{Html, IntoResponse};
+use axum::routing::get;
+use axum::{BoxError, Router};
+use axum_extra::routing::SpaRouter;
+use error::JSiteError;
 use regex::Regex;
-use rocket::Request;
-use rocket_dyn_templates::Template;
 use rst_parser::parse_links;
-use std::collections::HashMap;
-use std::error;
-use std::fmt;
-use std::io::Error;
-use std::path::{Path, PathBuf};
-use std::{fs, io};
+use serde::Serialize;
+use std::borrow::Cow;
+use std::net::SocketAddr;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
+use tera::{Context, Tera};
+use tower::ServiceBuilder;
+use tower_http::trace::TraceLayer;
 
-type PageResult<T> = std::result::Result<T, JSiteError>;
-
-#[derive(Clone, Debug)]
-struct PageNotFoundError;
-
-impl fmt::Display for PageNotFoundError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Page not found")
-    }
-}
-
-impl error::Error for PageNotFoundError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        None
-    }
-}
-
-#[derive(Clone, Debug)]
-enum JSiteError {
-    PageNotFound(PageNotFoundError),
-    IOError,
-}
-
-impl std::convert::From<PageNotFoundError> for JSiteError {
-    fn from(e: PageNotFoundError) -> Self {
-        JSiteError::PageNotFound(e)
-    }
-}
-
-impl std::convert::From<std::io::Error> for JSiteError {
-    fn from(_: Error) -> Self {
-        JSiteError::IOError
-    }
-}
+type PageResult<T> = Result<T, JSiteError>;
 
 #[derive(Serialize)]
 struct SiteFile {
@@ -71,16 +41,15 @@ struct PageData {
 
 /// Returns the rendered template of the index page of the website. This includes links and rst
 /// pages included in `static/raw_rst`
-#[get("/")]
-fn index() -> Template {
-    let mut map: HashMap<&str, Vec<SiteFile>> = HashMap::new();
+async fn index(State(state): State<Arc<Tera>>) -> PageResult<impl IntoResponse> {
+    let mut ctx = Context::new();
     let mut links: Vec<SiteFile> = Vec::new();
 
     // Get the links to display on the main page
-    get_pages("static/raw_rst", &mut links).ok();
+    get_pages("static/raw_rst", &mut links)?;
 
-    map.insert("links", links);
-    Template::render("index", &map)
+    ctx.insert("links", &links);
+    Ok(Html(state.render("index.html.tera", &ctx)?))
 }
 
 /// Gets all the raw rst pages contained in a directory
@@ -91,11 +60,11 @@ fn index() -> Template {
 /// # Arguments
 /// * `path` - the path to look for pages in
 /// * `pages` - A vector where found pages will be inserted
-fn get_pages(path: &str, pages: &mut Vec<SiteFile>) -> io::Result<()> {
+fn get_pages(path: &str, pages: &mut Vec<SiteFile>) -> PageResult<()> {
     let re = Regex::new(r"(?P<rank>^\d*)(?P<link_name>.+)").unwrap();
 
     // Find all files in the directory
-    for entry in fs::read_dir(path)? {
+    for entry in std::fs::read_dir(path)? {
         let entry = entry?;
         let path = entry.path();
         let file_name = match path.file_stem() {
@@ -142,9 +111,15 @@ fn get_pages(path: &str, pages: &mut Vec<SiteFile>) -> io::Result<()> {
 /// # Arguments
 /// * `path` - path to search in
 /// * `page_name` - file to look for
-fn get_page(path: &Path) -> PageResult<SiteFile> {
-    let file_name = path.file_name().ok_or(PageNotFoundError)?;
-    let file_name = file_name.to_str().ok_or(PageNotFoundError)?.to_string();
+fn get_page(path: &std::path::Path) -> PageResult<SiteFile> {
+    let file_name = path
+        .file_name()
+        .ok_or(JSiteError::PageNotFound(path.to_path_buf()))?;
+    let file_name = file_name
+        .to_str()
+        .ok_or(JSiteError::PageNotFound(path.to_path_buf()))?
+        .to_string();
+
     if path.exists() {
         return Ok(SiteFile {
             rank: 0,
@@ -171,21 +146,14 @@ fn get_page(path: &Path) -> PageResult<SiteFile> {
         }
     }
 
-    Err(JSiteError::from(PageNotFoundError))
-}
-
-fn error_page(page: &str) -> Template {
-    let mut map = HashMap::new();
-    map.insert("error_page", page);
-    Template::render("404", map)
+    Err(JSiteError::PageNotFound(path.to_path_buf()))
 }
 
 /// Returns a rendered template of a raw rst page if it exists
 ///
 /// # Arguments
 /// * `page` - path to page
-#[get("/about/<page..>")]
-fn rst_page(page: PathBuf) -> Template {
+async fn rst_page(tera: State<Arc<Tera>>, Path(page): Path<PathBuf>) -> PageResult<Html<String>> {
     let mut path = PathBuf::from("static/raw_rst");
     path.push(page);
 
@@ -193,17 +161,17 @@ fn rst_page(page: PathBuf) -> Template {
     let site_page = match get_page(path.as_path()) {
         Ok(site_page) => site_page,
         Err(_) => {
-            return error_page(path.to_str().unwrap());
+            return error_page(&tera, path.to_str().unwrap()).await;
         }
     };
 
-    if site_page.path.is_dir() {
+    let page = if site_page.path.is_dir() {
         // If the file is a directory, list its contents instead
-        let mut map = HashMap::new();
+        let mut map = Context::new();
         let mut sub_files: Vec<SiteFile> = Vec::new();
         match get_pages(site_page.path.to_str().unwrap(), &mut sub_files) {
             Ok(_) => (),
-            Err(_) => return error_page(&site_page.link_name),
+            Err(_) => return error_page(&tera, &site_page.link_name).await,
         }
 
         let page_data = PageData {
@@ -211,18 +179,14 @@ fn rst_page(page: PathBuf) -> Template {
             site_file: site_page,
         };
 
-        map.insert("page_data", page_data);
-        Template::render("listing", &map)
+        map.insert("page_data", &page_data);
+        tera.render("listing.html.tera", &map)?
     } else {
         // Else, render the RST page
-        let mut map = HashMap::new();
-        let contents = match fs::read_to_string(site_page.path) {
+        let mut map = Context::new();
+        let contents = match std::fs::read_to_string(site_page.path.clone()) {
             Ok(contents) => contents,
-            Err(_) => {
-                let mut map = HashMap::new();
-                map.insert("error_page", site_page.link_name);
-                return Template::render("404", map);
-            }
+            Err(_) => return error_page(&tera, site_page.path.to_str().unwrap()).await,
         };
 
         // Render links
@@ -230,34 +194,72 @@ fn rst_page(page: PathBuf) -> Template {
         contents = parse_images(contents.as_str()).unwrap();
 
         // Ensure render will look good
-        contents = contents.replace("\n", "<br>");
+        contents = contents.replace('\n', "<br>");
         contents = contents.replace("  ", "&nbsp;&nbsp;");
 
-        map.insert("page", site_page.link_name);
-        map.insert("content", contents);
-        Template::render("rst_page", &map)
-    }
+        map.insert("page", &site_page.link_name);
+        map.insert("content", &contents);
+        tera.render("rst_page.html.tera", &map)?
+    };
+
+    Ok(Html(page))
 }
 
-/// Catches 404 errors and displays an error message
-///
-/// #Arguments
-/// * `req` - information on the original request
-#[catch(404)]
-fn not_found(req: &Request<'_>) -> Template {
-    let mut map = HashMap::new();
+async fn error_page(tera: &Tera, page: &str) -> PageResult<Html<String>> {
+    let mut map = Context::new();
+    map.insert("error_page", page);
+    Ok(Html(tera.render("404.html.tera", &map)?))
+}
 
-    map.insert("error_page", String::from(req.uri().path().as_str()));
+async fn handle_error(error: BoxError) -> impl IntoResponse {
+    if error.is::<tower::timeout::error::Elapsed>() {
+        return (StatusCode::REQUEST_TIMEOUT, Cow::from("request timed out"));
+    }
 
-    Template::render("404", &map)
+    if error.is::<tower::load_shed::error::Overloaded>() {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Cow::from("service is overloaded, try again later"),
+        );
+    }
+
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Cow::from(format!("Unhandled internal error: {}", error)),
+    )
 }
 
 /// Launches website
-#[launch]
-fn rocket() -> _ {
-    rocket::build()
-        .mount("/", routes![index, rst_page])
-        .mount("/static", rocket::fs::FileServer::from("static"))
-        .attach(Template::fairing())
-        .register("/",catchers![not_found])
+#[tokio::main]
+async fn main() {
+    // Use globbing
+    let tera = match Tera::new("templates/*.tera") {
+        Ok(t) => Arc::new(t),
+        Err(e) => {
+            println!("Parsing error(s): {}", e);
+            return;
+        }
+    };
+
+    let app = Router::new()
+        .route("/", get(index))
+        .route("/about/*path", get(rst_page))
+        .merge(SpaRouter::new("/static", "static"))
+        .layer(
+            ServiceBuilder::new()
+                // Handle errors from middleware
+                .layer(HandleErrorLayer::new(handle_error))
+                .load_shed()
+                .concurrency_limit(1024)
+                .timeout(Duration::from_secs(10))
+                .layer(TraceLayer::new_for_http()),
+        )
+        .with_state(tera);
+
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    println!("listening on {}", addr);
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
 }

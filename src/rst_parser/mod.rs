@@ -1,8 +1,8 @@
 pub mod rst_error;
 
 use regex::{Captures, Regex};
-use std::collections::HashMap;
 use rst_error::RSTError;
+use std::collections::HashMap;
 use std::convert::TryFrom;
 
 /// RST Image
@@ -106,6 +106,8 @@ pub fn parse_images(string: &str) -> Result<String, RSTError> {
     )?;
 
     Ok(re_image
-        .replace_all(string, |cap: &Captures| RSTImage::try_from(cap).unwrap().to_html())
+        .replace_all(string, |cap: &Captures| {
+            RSTImage::try_from(cap).unwrap().to_html()
+        })
         .to_string())
 }
