@@ -1,24 +1,22 @@
-Joey Hines - joey@ahines.net - Westminster, CO
-==============================================
+# Joey Hines - joey@ahines.net - Westminster, CO
 
-Education
----------
+## Education
 * Masters of Science in Electrical and Computer Engineering
   * Auburn University, Auburn, AL. GPA: 3.9. May 2021
 * Bachelors of Science in Computer Engineering
   * The University of Texas at Dallas, Richardson, TX. GPA: 3.59. May 2019
 
-Technical Skills
-----------------
+## Technical Skills
 * Programing Languages: C, Python, Rust, Java
 * Operating Systems: Linux, Windows
 * Version Control: Git, SVN
 
-Work Experience
----------------
+## Work Experience
 Blue Canyon Technologies - Flight Software Engineer - May 2021 to Present
-* Developed flight software for small satellite missions
+* Developed flight software for multiple small satellite missions across the BCT product line range
 * Collaborated with mission operations to improve ground station capabilities
+* Improved test infrastructure and scripting
+* Supported the summer internship program as a mentor
 
 Auburn University - Graduate Research and Teaching Assistant - August 2019 to May 2021
 * Command and Data Handling (CDHS) team lead for a cube satellite project

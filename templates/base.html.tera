@@ -5,7 +5,7 @@
     <link rel="stylesheet" type="text/css" href="/static/style.css" xmlns="http://www.w3.org/1999/html">
     <meta charset="UTF-8">
     <title>Joey Hines.</title>
-    <link href="https://fonts.googleapis.com/css?family=Ubuntu+Mono&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/hack-font/3.3.0/web/hack.min.css" rel="stylesheet">
     <link rel='shortcut icon' href='/static/logo.png'/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
@@ -14,12 +14,12 @@
 <div class="center">
     <a class="no_underline" href="/"> <h1 class="heading"> Joey Hines.</h1></a>
         <div class="terminal">
-            <p class="text body">
+            <div class="text body">
                 <span class="prompt">joey@ahines:~$</span> {% block command %}{% endblock command %} <br/>
                 {% block content %}{% endblock content %}
                 <br/>
-                <span class="prompt">joey@ahines:~$</span> <span class="blinking">  &#9610; </span>
-            </p>
+            </div>
+            <span class="prompt text body">joey@ahines:~$</span> <span class="blinking">  &#9610; </span>
         </div>
     <h6 class="text"> &copy <script type="text/javascript">document.write( new Date().getFullYear().toString());</script> Joey Hines</h6>
 </div>

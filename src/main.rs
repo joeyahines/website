@@ -1,8 +1,7 @@
+mod config;
 mod error;
-mod rst_parser;
 mod tests;
 
-use crate::rst_parser::parse_images;
 use axum::error_handling::HandleErrorLayer;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -10,20 +9,21 @@ use axum::response::{Html, IntoResponse};
 use axum::routing::get;
 use axum::{BoxError, Router};
 use axum_extra::routing::SpaRouter;
-use error::JSiteError;
+use error::{JSiteError, PageResult};
+use pulldown_cmark::html::push_html;
+use pulldown_cmark::{Options, Parser};
 use regex::Regex;
-use rst_parser::parse_links;
 use serde::Serialize;
 use std::borrow::Cow;
-use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
+use structopt::StructOpt;
 use tera::{Context, Tera};
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
 
-type PageResult<T> = Result<T, JSiteError>;
+use crate::config::SiteArgs;
 
 #[derive(Serialize)]
 struct SiteFile {
@@ -39,20 +39,20 @@ struct PageData {
     links: Vec<SiteFile>,
 }
 
-/// Returns the rendered template of the index page of the website. This includes links and rst
-/// pages included in `static/raw_rst`
+/// Returns the rendered template of the index page of the website. This includes links and md
+/// pages included in `static/raw_md`
 async fn index(State(state): State<Arc<Tera>>) -> PageResult<impl IntoResponse> {
     let mut ctx = Context::new();
     let mut links: Vec<SiteFile> = Vec::new();
 
     // Get the links to display on the main page
-    get_pages("static/raw_rst", &mut links)?;
+    get_pages("static/raw_md", &mut links)?;
 
     ctx.insert("links", &links);
     Ok(Html(state.render("index.html.tera", &ctx)?))
 }
 
-/// Gets all the raw rst pages contained in a directory
+/// Gets all the raw md pages contained in a directory
 ///
 /// The order of the vector is determined by OS. Ordering can be set by prepending the file name
 /// with a number. Files that start with lower numbers are placed earlier in the list.
@@ -86,7 +86,7 @@ fn get_pages(path: &str, pages: &mut Vec<SiteFile>) -> PageResult<()> {
             } else {
                 match rank.parse() {
                     Ok(r) => r,
-                    Err(_) => std::u32::MAX,
+                    Err(_) => u32::MAX,
                 }
             };
 
@@ -149,12 +149,12 @@ fn get_page(path: &std::path::Path) -> PageResult<SiteFile> {
     Err(JSiteError::PageNotFound(path.to_path_buf()))
 }
 
-/// Returns a rendered template of a raw rst page if it exists
+/// Returns a rendered template of a raw md page if it exists
 ///
 /// # Arguments
 /// * `page` - path to page
-async fn rst_page(tera: State<Arc<Tera>>, Path(page): Path<PathBuf>) -> PageResult<Html<String>> {
-    let mut path = PathBuf::from("static/raw_rst");
+async fn md_page(tera: State<Arc<Tera>>, Path(page): Path<PathBuf>) -> PageResult<Html<String>> {
+    let mut path = PathBuf::from("static/raw_md");
     path.push(page);
 
     // Try and get the page
@@ -182,35 +182,35 @@ async fn rst_page(tera: State<Arc<Tera>>, Path(page): Path<PathBuf>) -> PageResu
         map.insert("page_data", &page_data);
         tera.render("listing.html.tera", &map)?
     } else {
-        // Else, render the RST page
+        // Else, render the MD page
         let mut map = Context::new();
         let contents = match std::fs::read_to_string(site_page.path.clone()) {
             Ok(contents) => contents,
             Err(_) => return error_page(&tera, site_page.path.to_str().unwrap()).await,
         };
 
-        // Render links
-        let mut contents = parse_links(&contents).unwrap();
-        contents = parse_images(contents.as_str()).unwrap();
+        let options = Options::all();
+        let parser = Parser::new_ext(&contents, options);
 
-        // Ensure render will look good
-        contents = contents.replace('\n', "<br>");
-        contents = contents.replace("  ", "&nbsp;&nbsp;");
+        let mut html_output = String::new();
+        push_html(&mut html_output, parser);
 
         map.insert("page", &site_page.link_name);
-        map.insert("content", &contents);
-        tera.render("rst_page.html.tera", &map)?
+        map.insert("content", &html_output);
+        tera.render("md_page.html.tera", &map)?
     };
 
     Ok(Html(page))
 }
 
+/// Build error page
 async fn error_page(tera: &Tera, page: &str) -> PageResult<Html<String>> {
     let mut map = Context::new();
     map.insert("error_page", page);
     Ok(Html(tera.render("404.html.tera", &map)?))
 }
 
+/// Handle server errors
 async fn handle_error(error: BoxError) -> impl IntoResponse {
     if error.is::<tower::timeout::error::Elapsed>() {
         return (StatusCode::REQUEST_TIMEOUT, Cow::from("request timed out"));
@@ -232,6 +232,8 @@ async fn handle_error(error: BoxError) -> impl IntoResponse {
 /// Launches website
 #[tokio::main]
 async fn main() {
+    let args = SiteArgs::from_args();
+
     // Use globbing
     let tera = match Tera::new("templates/*.tera") {
         Ok(t) => Arc::new(t),
@@ -243,7 +245,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(index))
-        .route("/about/*path", get(rst_page))
+        .route("/about/*path", get(md_page))
         .merge(SpaRouter::new("/static", "static"))
         .layer(
             ServiceBuilder::new()
@@ -256,9 +258,8 @@ async fn main() {
         )
         .with_state(tera);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    println!("listening on {}", addr);
-    axum::Server::bind(&addr)
+    println!("listening on {}", args.serve_at);
+    axum::Server::bind(&args.serve_at)
         .serve(app.into_make_service())
         .await
         .unwrap();

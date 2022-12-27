@@ -44,3 +44,5 @@ impl Display for JSiteError {
         }
     }
 }
+
+pub type PageResult<T> = Result<T, JSiteError>;

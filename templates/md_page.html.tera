@@ -1,10 +1,11 @@
 {% extends "base.html.tera" %}
 
 {% block command %}
-cat {{ page }}.rst
+cat {{ page }}.md
 {% endblock command %}
 
 
+<div class="text">
 {% block content %}
 <br/>
 {{ content | safe }}
