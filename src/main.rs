@@ -1,6 +1,5 @@
 mod config;
 mod error;
-mod tests;
 
 use axum::error_handling::HandleErrorLayer;
 use axum::extract::{Path, State};
@@ -46,7 +45,7 @@ async fn index(State(state): State<Arc<Tera>>) -> PageResult<impl IntoResponse> 
     let mut links: Vec<SiteFile> = Vec::new();
 
     // Get the links to display on the main page
-    get_pages("static/raw_md", &mut links)?;
+    get_pages("static/raw_md", &mut links).await?;
 
     ctx.insert("links", &links);
     Ok(Html(state.render("index.html.tera", &ctx)?))
@@ -60,12 +59,12 @@ async fn index(State(state): State<Arc<Tera>>) -> PageResult<impl IntoResponse> 
 /// # Arguments
 /// * `path` - the path to look for pages in
 /// * `pages` - A vector where found pages will be inserted
-fn get_pages(path: &str, pages: &mut Vec<SiteFile>) -> PageResult<()> {
+async fn get_pages(path: &str, pages: &mut Vec<SiteFile>) -> PageResult<()> {
     let re = Regex::new(r"(?P<rank>^\d*)(?P<link_name>.+)").unwrap();
 
     // Find all files in the directory
-    for entry in std::fs::read_dir(path)? {
-        let entry = entry?;
+    let mut dir = tokio::fs::read_dir(path).await?;
+    while let Some(entry) = dir.next_entry().await? {
         let path = entry.path();
         let file_name = match path.file_stem() {
             Some(name) => name,
@@ -81,13 +80,9 @@ fn get_pages(path: &str, pages: &mut Vec<SiteFile>) -> PageResult<()> {
             let link_name = &caps["link_name"];
             let rank = &caps["rank"];
 
-            let rank: u32 = if rank.is_empty() {
-                std::u32::MAX
-            } else {
-                match rank.parse() {
-                    Ok(r) => r,
-                    Err(_) => u32::MAX,
-                }
+            let rank = match rank.parse() {
+                Ok(r) => r,
+                Err(_) => u32::MAX,
             };
 
             let site_file = SiteFile {
@@ -169,7 +164,7 @@ async fn md_page(tera: State<Arc<Tera>>, Path(page): Path<PathBuf>) -> PageResul
         // If the file is a directory, list its contents instead
         let mut map = Context::new();
         let mut sub_files: Vec<SiteFile> = Vec::new();
-        match get_pages(site_page.path.to_str().unwrap(), &mut sub_files) {
+        match get_pages(site_page.path.to_str().unwrap(), &mut sub_files).await {
             Ok(_) => (),
             Err(_) => return error_page(&tera, &site_page.link_name).await,
         }
@@ -184,7 +179,7 @@ async fn md_page(tera: State<Arc<Tera>>, Path(page): Path<PathBuf>) -> PageResul
     } else {
         // Else, render the MD page
         let mut map = Context::new();
-        let contents = match std::fs::read_to_string(site_page.path.clone()) {
+        let contents = match tokio::fs::read_to_string(site_page.path.clone()).await {
             Ok(contents) => contents,
             Err(_) => return error_page(&tera, site_page.path.to_str().unwrap()).await,
         };
