@@ -1,4 +1,4 @@
-# Joey Hines - joey@ahines.net - Westminster, CO
+# Joey Hines - joey@ahines.net - Lafayette, CO
 
 ## Education
 * Masters of Science in Electrical and Computer Engineering
@@ -12,11 +12,12 @@
 * Version Control: Git, SVN
 
 ## Work Experience
-Blue Canyon Technologies - Flight Software Engineer - May 2021 to Present
+Loft Orbital Federal - Mission Specific Software Engineer - October 2023 - Now
+
+Blue Canyon Technologies - Flight Software Engineer - May 2021 to September 2023
 * Developed flight software for multiple small satellite missions across the BCT product line range
-* Collaborated with mission operations to improve ground station capabilities
-* Improved test infrastructure and scripting
-* Supported the summer internship program as a mentor
+* Supported AI&T diagnosing and resolving issues
+* Improved the common FSW product and testing infrastructure 
 
 Auburn University - Graduate Research and Teaching Assistant - August 2019 to May 2021
 * Command and Data Handling (CDHS) team lead for a cube satellite project

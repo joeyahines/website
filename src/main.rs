@@ -7,7 +7,6 @@ use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse};
 use axum::routing::get;
 use axum::{BoxError, Router};
-use axum_extra::routing::SpaRouter;
 use error::{JSiteError, PageResult};
 use pulldown_cmark::html::push_html;
 use pulldown_cmark::{Options, Parser};
@@ -20,7 +19,7 @@ use std::time::Duration;
 use structopt::StructOpt;
 use tera::{Context, Tera};
 use tower::ServiceBuilder;
-use tower_http::trace::TraceLayer;
+use tower_http::services::ServeDir;
 
 use crate::config::SiteArgs;
 
@@ -241,15 +240,14 @@ async fn main() {
     let app = Router::new()
         .route("/", get(index))
         .route("/about/*path", get(md_page))
-        .merge(SpaRouter::new("/static", "static"))
+        .nest_service("/static", ServeDir::new("static"))
         .layer(
             ServiceBuilder::new()
                 // Handle errors from middleware
                 .layer(HandleErrorLayer::new(handle_error))
                 .load_shed()
                 .concurrency_limit(1024)
-                .timeout(Duration::from_secs(10))
-                .layer(TraceLayer::new_for_http()),
+                .timeout(Duration::from_secs(10)),
         )
         .with_state(tera);
 
